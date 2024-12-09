@@ -26,11 +26,18 @@ function App(): React.JSX.Element {
     <SafeAreaView style={backgroundStyle}>
       <Text>Hello</Text>
       <Button title="Press me" onPress={ditBonjour} />
-      <View style={styles.view}></View>
-      <Image
-        style={styles.image}
-        source={require('./src/assets/images/youtube.png')}
-      />
+      <View style={styles.view}>
+        <Image
+          style={styles.image}
+          source={require('./src/assets/images/youtube.png')}
+        />
+
+        <View style={styles.buttonContainer}>
+          <Button title="A" />
+          <Button title="B" />
+          <Button title="C" />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -38,13 +45,24 @@ function App(): React.JSX.Element {
 const styles = StyleSheet.create({
   view: {
     backgroundColor: 'red',
-    width: 1000,
+    width: '100%',
     height: 50,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   image: {
     width: 100,
     resizeMode: 'contain',
-    height: 100,
+    height: 50,
+  },
+  button: {
+    width: 100,
+    height: 50,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'blue',
   },
 });
 
