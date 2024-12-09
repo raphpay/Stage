@@ -1,15 +1,14 @@
 import React from 'react';
 import {
-  Button,
   Image,
   SafeAreaView,
   StyleSheet,
-  Text,
   useColorScheme,
   View,
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
+import IconButton from './src/ui/components/IconButton';
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -22,10 +21,20 @@ function App(): React.JSX.Element {
     console.log('Bonjour');
   }
 
+  function live() {
+    console.log('live');
+  }
+
+  function notifications() {
+    console.log('notifications');
+  }
+
+  function recherche() {
+    console.log('recherche');
+  }
+
   return (
     <SafeAreaView style={backgroundStyle}>
-      <Text>Hello</Text>
-      <Button title="Press me" onPress={ditBonjour} />
       <View style={styles.view}>
         <Image
           style={styles.image}
@@ -33,9 +42,18 @@ function App(): React.JSX.Element {
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="A" />
-          <Button title="B" />
-          <Button title="C" />
+          <IconButton
+            source={require('./src/assets/images/live.png')}
+            action={live}
+          />
+          <IconButton
+            source={require('./src/assets/images/notifications.png')}
+            action={notifications}
+          />
+          <IconButton
+            source={require('./src/assets/images/recherche.png')}
+            action={recherche}
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -44,7 +62,6 @@ function App(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   view: {
-    backgroundColor: 'red',
     width: '100%',
     height: 50,
     flexDirection: 'row',
@@ -62,8 +79,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'blue',
+    alignItems: 'center',
   },
+  icon: {width: 35, height: 35},
 });
 
 export default App;
