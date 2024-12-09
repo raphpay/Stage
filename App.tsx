@@ -58,6 +58,7 @@ function App(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.backgroundStyle}>
+      {/* top barre */}
       <View style={styles.view}>
         <Image
           style={styles.image}
@@ -95,6 +96,12 @@ function App(): React.JSX.Element {
             {category}
           </Text>
         ))}
+      </ScrollView>
+
+      <ScrollView>
+        <View style={styles.video}>
+          <Image source={require('./src/assets/images/miniature-1.jpeg')} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -144,6 +151,13 @@ const styles = StyleSheet.create({
     color: '#333',
     marginRight: 20, // Espacement entre les catégories
   },
+  video: {
+    width: '100%',
+    backgroundColor: 'white',
+    height: 500,
+    alignItems: 'center',
+  },
+  miniature: {width: '100%', height: 500},
 });
 
 export default App;
