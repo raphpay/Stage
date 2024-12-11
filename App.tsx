@@ -10,31 +10,24 @@ import {
   View,
 } from 'react-native';
 
-// Application principale avec la navigation
 const App = () => {
-  const [pokemonList, setPokemonList] = useState([]); // Liste des Pokémon
-  const [loading, setLoading] = useState(false); // État de chargement
-  const [selectedPokemon, setSelectedPokemon] = useState(null); // Pokémon sélectionné avec ses détails
-  const [combatants, setCombatants] = useState([]); // Pokémon choisis pour le combat
-  const [combatResult, setCombatResult] = useState(null); // Résultat du combat
+  const [pokemonList, setPokemonList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPokemon, setSelectedPokemon] = useState(null);
+  const [combatants, setCombatants] = useState([]);
+  const [combatResult, setCombatResult] = useState(null);
 
-  // Fonction pour récupérer le nom en français d'un Pokémon à partir de son URL
   const getPokemonNameInFrench = async url => {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      const speciesUrl = data.species.url;
-
-      // Récupérer les traductions disponibles
-      const speciesResponse = await fetch(speciesUrl);
+      const speciesResponse = await fetch(data.species.url);
       const speciesData = await speciesResponse.json();
 
-      // Trouver le nom en français
       const frenchName = speciesData.names.find(
         name => name.language.name === 'fr',
       );
 
-      // Retourner le nom en français ou en anglais si non trouvé
       return frenchName ? frenchName.name : data.name;
     } catch (error) {
       console.error(
@@ -45,68 +38,122 @@ const App = () => {
     }
   };
 
-  // Fonction pour récupérer tous les Pokémon depuis l'API
   const fetchPokemon = async () => {
-    setLoading(true); // On active le chargement
+    setLoading(true);
 
     try {
       const response = await fetch(
-        'https://pokeapi.co/api/v2/pokemon?limit=20', // Appel à l'API pour récupérer 20 Pokémon
+        'https://pokeapi.co/api/v2/pokemon?limit=50',
       );
-      const data = await response.json(); // Conversion des données en JSON
+      const data = await response.json();
 
-      // Récupérer l'image et le nom en français pour chaque Pokémon
       const updatedPokemonList = await Promise.all(
         data.results.map(async pokemon => {
-          const pokemonResponse = await fetch(pokemon.url);
-          const pokemonData = await pokemonResponse.json();
-          const frenchName = await getPokemonNameInFrench(pokemon.url);
-          return {
-            ...pokemon,
-            image: pokemonData.sprites.front_default, // Récupère l'image du Pokémon
-            name: frenchName || pokemon.name, // Utilise le nom en français ou en anglais
-            stats: pokemonData.stats, // Ajoute les stats du Pokémon
-            height: pokemonData.height,
-            weight: pokemonData.weight,
-            types: pokemonData.types,
-          };
+          try {
+            const pokemonResponse = await fetch(pokemon.url);
+            const pokemonData = await pokemonResponse.json();
+            const frenchName = await getPokemonNameInFrench(pokemon.url);
+
+            return {
+              ...pokemon,
+              image: pokemonData.sprites.front_default,
+              name: frenchName || pokemon.name,
+              stats: pokemonData.stats,
+              height: pokemonData.height,
+              weight: pokemonData.weight,
+              types: pokemonData.types,
+              id: pokemonData.id,
+            };
+          } catch (error) {
+            console.error(
+              'Erreur lors de la récupération des données du Pokémon :',
+              error,
+            );
+            return null;
+          }
         }),
       );
 
-      setPokemonList(updatedPokemonList); // Mise à jour de l'état avec la liste des Pokémon
+      setPokemonList(updatedPokemonList.filter(Boolean));
     } catch (error) {
       console.error('Erreur de récupération des Pokémon :', error);
     } finally {
-      setLoading(false); // On désactive le chargement
+      setLoading(false);
     }
   };
 
-  // Fonction pour récupérer les détails d'un Pokémon
-  const fetchPokemonDetails = async name => {
-    setLoading(true); // On active le chargement des détails du Pokémon
+  const fetchPokemonDetails = async id => {
+    setLoading(true);
 
     try {
-      const response = await fetch(
-        `https://pokeapi.co/api/v2/pokemon/${name}`, // URL pour récupérer les détails d'un Pokémon
-      );
-      const data = await response.json(); // Conversion des données en JSON
-      setSelectedPokemon(data); // Mettre à jour l'état avec les informations détaillées du Pokémon
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+      const data = await response.json();
+      setSelectedPokemon(data);
     } catch (error) {
       console.error('Erreur de récupération des détails du Pokémon :', error);
     } finally {
-      setLoading(false); // On désactive le chargement
+      setLoading(false);
     }
   };
 
-  // Fonction pour commencer un combat entre deux Pokémon
+  const typeAdvantages = {
+    fire: {
+      strongAgainst: ['grass', 'bug', 'ice', 'steel'],
+      weakAgainst: ['water', 'rock', 'fire'],
+    },
+    water: {
+      strongAgainst: ['fire', 'rock', 'ground'],
+      weakAgainst: ['electric', 'grass'],
+    },
+    grass: {
+      strongAgainst: ['water', 'rock', 'ground'],
+      weakAgainst: ['fire', 'flying', 'bug', 'poison', 'ice'],
+    },
+    electric: {strongAgainst: ['water', 'flying'], weakAgainst: ['ground']},
+    ground: {
+      strongAgainst: ['electric', 'fire', 'rock', 'steel'],
+      weakAgainst: ['water', 'ice', 'grass'],
+    },
+    // Ajoutez plus de types ici...
+  };
+
+  const calculateTypeModifier = (attackerTypes, defenderTypes) => {
+    let modifier = 1;
+
+    attackerTypes.forEach(attackerType => {
+      const advantages = typeAdvantages[attackerType?.type?.name];
+      if (!advantages) return;
+
+      defenderTypes.forEach(defenderType => {
+        const defenderTypeName = defenderType?.type?.name;
+        if (advantages.strongAgainst.includes(defenderTypeName)) {
+          modifier *= 1.5; // Bonus de type fort
+        } else if (advantages.weakAgainst.includes(defenderTypeName)) {
+          modifier *= 0.5; // Malus de type faible
+        }
+      });
+    });
+
+    return modifier;
+  };
+
   const startCombat = () => {
     const [pokemon1, pokemon2] = combatants;
 
-    // Calcul de la puissance des Pokémon (simple exemple avec attaque et défense)
-    const power1 = pokemon1.stats[4].base_stat + pokemon1.stats[1].base_stat; // Attaque + Défense
-    const power2 = pokemon2.stats[4].base_stat + pokemon2.stats[1].base_stat; // Attaque + Défense
+    if (!pokemon1 || !pokemon2 || !pokemon1.stats || !pokemon2.stats) {
+      console.error(
+        'Les informations des Pokémon sont incomplètes pour le combat.',
+      );
+      return;
+    }
 
-    // Déterminer le gagnant
+    const power1 =
+      (pokemon1.stats[4]?.base_stat + pokemon1.stats[1]?.base_stat) *
+      calculateTypeModifier(pokemon1.types, pokemon2.types);
+    const power2 =
+      (pokemon2.stats[4]?.base_stat + pokemon2.stats[1]?.base_stat) *
+      calculateTypeModifier(pokemon2.types, pokemon1.types);
+
     if (power1 > power2) {
       setCombatResult(`${pokemon1.name} gagne le combat!`);
     } else if (power2 > power1) {
@@ -116,32 +163,30 @@ const App = () => {
     }
   };
 
-  // Fonction pour ajouter un Pokémon aux combattants
   const selectCombatant = pokemon => {
-    if (combatants.length < 2) {
+    if (combatants.length < 2 && !combatants.includes(pokemon)) {
       setCombatants(prev => [...prev, pokemon]);
     }
   };
 
-  // Fonction pour convertir les hectogrammes en kilogrammes
-  const convertToKg = hectograms => {
-    return (hectograms / 10).toFixed(2); // 1 hectogramme = 0.1 kilogramme
-  };
+  const convertToKg = hectograms => (hectograms / 10).toFixed(2);
 
-  // Fonction pour convertir les décimètres en mètres
-  const convertToMeters = decimeters => {
-    return (decimeters / 10).toFixed(2); // 1 décimètre = 0.1 mètre
-  };
+  const convertToMeters = decimeters => (decimeters / 10).toFixed(2);
 
-  // Rendu des Pokémon dans une liste avec image à côté du nom
   const renderItem = ({item}) => (
-    <TouchableOpacity
-      style={styles.pokemonItem}
-      onPress={() => selectCombatant(item)} // Ajouter le Pokémon aux combattants
-    >
-      <Image source={{uri: item.image}} style={styles.pokemonImage} />
-      <Text style={styles.pokemonText}>{item.name}</Text>
-    </TouchableOpacity>
+    <View style={styles.pokemonItem}>
+      <TouchableOpacity
+        onPress={() => selectCombatant(item)}
+        style={styles.itemDetails}>
+        <Image source={{uri: item.image}} style={styles.pokemonImage} />
+        <Text style={styles.pokemonText}>{item.name}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.infoButton}
+        onPress={() => fetchPokemonDetails(item.id)}>
+        <Text style={styles.buttonText}>i</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -153,7 +198,6 @@ const App = () => {
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : selectedPokemon ? (
-        // Afficher les détails du Pokémon sélectionné
         <View style={styles.pokemonDetailsContainer}>
           <Text style={styles.pokemonDetailsTitle}>
             Détails de {selectedPokemon.name}
@@ -180,17 +224,15 @@ const App = () => {
           ))}
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setSelectedPokemon(null)} // Revenir à la liste des Pokémon
-          >
+            onPress={() => setSelectedPokemon(null)}>
             <Text style={styles.buttonText}>Retour à la liste</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        // Affichage de la liste des Pokémon avec image
         <FlatList
           data={pokemonList}
           renderItem={renderItem}
-          keyExtractor={item => item.url} // Utilise l'URL comme clé unique
+          keyExtractor={item => item.id.toString()}
           style={styles.pokemonList}
         />
       )}
@@ -212,8 +254,8 @@ const App = () => {
           <TouchableOpacity
             style={styles.button}
             onPress={() => {
-              setCombatants([]); // Réinitialiser les combattants
-              setCombatResult(null); // Réinitialiser le résultat
+              setCombatants([]);
+              setCombatResult(null);
             }}>
             <Text style={styles.buttonText}>Rejouer</Text>
           </TouchableOpacity>
@@ -223,8 +265,8 @@ const App = () => {
   );
 };
 
-// Styles du jeu
 const styles = StyleSheet.create({
+  // Styles inchangés pour simplifier le rendu.
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -258,6 +300,11 @@ const styles = StyleSheet.create({
     elevation: 3,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  itemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   pokemonImage: {
     width: 50,
@@ -267,6 +314,11 @@ const styles = StyleSheet.create({
   pokemonText: {
     fontSize: 18,
     color: '#333',
+  },
+  infoButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 50,
+    padding: 10,
   },
   pokemonDetailsContainer: {
     alignItems: 'center',
