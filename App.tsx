@@ -11,6 +11,7 @@ import {
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import IconButton from './src/ui/components/IconButton';
+import Video from './src/ui/components/Video';
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -55,7 +56,17 @@ function App(): React.JSX.Element {
   function safari() {
     console.log('safari');
   }
+  function video1() {
+    console.log('video1');
+  }
 
+  function video2() {
+    console.log('video2');
+  }
+
+  function video3() {
+    console.log('video3');
+  }
   return (
     <SafeAreaView style={styles.backgroundStyle}>
       {/* top barre */}
@@ -99,9 +110,21 @@ function App(): React.JSX.Element {
       </ScrollView>
 
       <ScrollView>
-        <View style={styles.video}>
-          <Image source={require('./src/assets/images/miniature-1.jpeg')} />
-        </View>
+        <Video
+          title={'video1'}
+          source={require('./src/assets/images/miniature-1.jpeg')}
+          action={video1}
+        />
+        <Video
+          title={'video2'}
+          source={require('./src/assets/images/miniature-2.jpeg')}
+          action={video2}
+        />
+        <Video
+          title={'video3'}
+          source={require('./src/assets/images/miniature-3.jpeg')}
+          action={video3}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -151,13 +174,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginRight: 20, // Espacement entre les catégories
   },
-  video: {
-    width: '100%',
-    backgroundColor: 'white',
-    height: 500,
-    alignItems: 'center',
-  },
-  miniature: {width: '100%', height: 500},
 });
 
 export default App;
