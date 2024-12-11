@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import CombatArena from './src/ui/components/AnimationCombat';
 
 const App = () => {
   const [pokemonList, setPokemonList] = useState([]);
@@ -114,11 +115,10 @@ const App = () => {
       strongAgainst: ['electric', 'fire', 'rock', 'steel'],
       weakAgainst: ['water', 'ice', 'grass'],
     },
-    // Ajoutez plus de types ici...
   };
 
   const calculateTypeModifier = (attackerTypes, defenderTypes) => {
-    let modifier = 1;
+    let attackBonus = 0;
 
     attackerTypes.forEach(attackerType => {
       const advantages = typeAdvantages[attackerType?.type?.name];
@@ -127,37 +127,36 @@ const App = () => {
       defenderTypes.forEach(defenderType => {
         const defenderTypeName = defenderType?.type?.name;
         if (advantages.strongAgainst.includes(defenderTypeName)) {
-          modifier *= 1.5; // Bonus de type fort
-        } else if (advantages.weakAgainst.includes(defenderTypeName)) {
-          modifier *= 0.5; // Malus de type faible
+          attackBonus += 20; // Bonus de 20 points pour type fort
         }
       });
     });
 
-    return modifier;
+    return attackBonus;
   };
 
   const startCombat = () => {
+    if (combatants.length < 2) return;
+
     const [pokemon1, pokemon2] = combatants;
 
-    if (!pokemon1 || !pokemon2 || !pokemon1.stats || !pokemon2.stats) {
-      console.error(
-        'Les informations des Pokémon sont incomplètes pour le combat.',
-      );
-      return;
-    }
+    const typeBonus1 = calculateTypeModifier(pokemon1.types, pokemon2.types);
+    const typeBonus2 = calculateTypeModifier(pokemon2.types, pokemon1.types);
 
     const power1 =
-      (pokemon1.stats[4]?.base_stat + pokemon1.stats[1]?.base_stat) *
-      calculateTypeModifier(pokemon1.types, pokemon2.types);
+      pokemon1.stats[4]?.base_stat + // Stat d'attaque spéciale
+      pokemon1.stats[1]?.base_stat + // Stat d'attaque
+      typeBonus1;
+
     const power2 =
-      (pokemon2.stats[4]?.base_stat + pokemon2.stats[1]?.base_stat) *
-      calculateTypeModifier(pokemon2.types, pokemon1.types);
+      pokemon2.stats[4]?.base_stat + // Stat d'attaque spéciale
+      pokemon2.stats[1]?.base_stat + // Stat d'attaque
+      typeBonus2;
 
     if (power1 > power2) {
-      setCombatResult(`${pokemon1.name} gagne le combat!`);
+      setCombatResult(`${pokemon1.name} gagne le combat !`);
     } else if (power2 > power1) {
-      setCombatResult(`${pokemon2.name} gagne le combat!`);
+      setCombatResult(`${pokemon2.name} gagne le combat !`);
     } else {
       setCombatResult("C'est un match nul !");
     }
@@ -238,14 +237,12 @@ const App = () => {
       )}
 
       {combatants.length === 2 && (
-        <View style={styles.combatContainer}>
-          <Text style={styles.combatText}>
-            Combat entre {combatants[0].name} et {combatants[1].name}
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={startCombat}>
-            <Text style={styles.buttonText}>Démarrer le combat</Text>
-          </TouchableOpacity>
-        </View>
+        <CombatArena
+          pokemon1={combatants[0]}
+          pokemon2={combatants[1]}
+          combatResult={combatResult}
+          startCombat={startCombat}
+        />
       )}
 
       {combatResult && (
@@ -266,7 +263,6 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
-  // Styles inchangés pour simplifier le rendu.
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -335,15 +331,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
     marginTop: 20,
-  },
-  combatContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  combatText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
   },
   resultContainer: {
     marginTop: 20,
