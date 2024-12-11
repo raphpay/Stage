@@ -1,179 +1,185 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
+  Animated,
+  Dimensions,
+  PanResponder,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from 'react-native';
 
-import {Colors} from 'react-native/Libraries/NewAppScreen';
-import IconButton from './src/ui/components/IconButton';
-import Video from './src/ui/components/Video';
+// Obtenir la largeur et la hauteur de l'écran
+const {width, height} = Dimensions.get('window');
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+// Taille du joueur et des obstacles
+const PLAYER_WIDTH = 40;
+const PLAYER_HEIGHT = 40;
+const OBSTACLE_WIDTH = 60;
+const OBSTACLE_HEIGHT = 20;
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+export default function App() {
+  const [playerPosition, setPlayerPosition] = useState(
+    new Animated.Value(width / 2 - PLAYER_WIDTH / 2),
+  ); // Position horizontale
+  const [obstacles, setObstacles] = useState([]);
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [obstacleSpeed, setObstacleSpeed] = useState(5); // Vitesse initiale des obstacles
+  const [intervalSpeedIncrease] = useState(10000); // Temps pour augmenter la vitesse des obstacles (en ms)
+
+  // Contrôles du joueur
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gestureState) => {
+      if (!gameOver) {
+        let newPos = gestureState.moveX - PLAYER_WIDTH / 2; // Position centrée sur le doigt
+        if (newPos < 0) newPos = 0; // Limiter à gauche
+        if (newPos > width - PLAYER_WIDTH) newPos = width - PLAYER_WIDTH; // Limiter à droite
+        setPlayerPosition(new Animated.Value(newPos)); // Mettre à jour la position avec un nouvel Animated.Value
+      }
+    },
+  });
+
+  // Fonction pour créer un obstacle
+  const createObstacle = () => {
+    if (!gameOver) {
+      const left = Math.random() * (width - OBSTACLE_WIDTH); // Position horizontale aléatoire
+      const newObstacle = {
+        left,
+        top: -OBSTACLE_HEIGHT, // Commence hors de l'écran
+        id: Date.now(),
+      };
+      setObstacles(prevObstacles => [...prevObstacles, newObstacle]); // Ajouter un obstacle
+    }
   };
 
-  const categories = [
-    'All',
-    'New to you',
-    'Apple',
-    'Gaming',
-    'Video',
-    'Music',
-    'Trending',
-    'Tech',
-    'News',
-    'Sports',
-    'Comedy',
-    'Movies',
-    'Health',
-    'Food',
-    'Fashion',
-  ];
+  // Fonction pour déplacer les obstacles
+  const moveObstacles = () => {
+    if (!gameOver) {
+      setObstacles(prevObstacles => {
+        return prevObstacles
+          .map(obstacle => {
+            const newTop = obstacle.top + obstacleSpeed; // Descendre l'obstacle
+            if (newTop > height) {
+              setScore(prevScore => prevScore + 1); // Augmenter le score quand l'obstacle touche le bas
+              return null; // Supprimer l'obstacle une fois qu'il sort de l'écran
+            }
 
-  function ditBonjour() {
-    console.log('Bonjour');
-  }
+            // Détection de collision
+            if (
+              newTop >= height - PLAYER_HEIGHT &&
+              obstacle.left < playerPosition._value + PLAYER_WIDTH &&
+              obstacle.left + OBSTACLE_WIDTH > playerPosition._value
+            ) {
+              setGameOver(true); // Fin du jeu en cas de collision
+            }
 
-  function live() {
-    console.log('live');
-  }
+            return {...obstacle, top: newTop}; // Mettre à jour la position de l'obstacle
+          })
+          .filter(Boolean); // Filtrer les obstacles qui sont hors de l'écran
+      });
+    }
+  };
 
-  function notifications() {
-    console.log('notifications');
-  }
+  // Mettre à jour les obstacles toutes les 30 ms
+  useEffect(() => {
+    if (!gameOver) {
+      const intervalId = setInterval(moveObstacles, 30);
+      return () => clearInterval(intervalId); // Nettoyage de l'intervalle
+    }
+  }, [obstacles, gameOver, obstacleSpeed]);
 
-  function recherche() {
-    console.log('recherche');
-  }
-  function safari() {
-    console.log('safari');
-  }
-  function video1() {
-    console.log('video1');
-  }
+  // Créer des obstacles toutes les 2 secondes
+  useEffect(() => {
+    if (!gameOver) {
+      const intervalId = setInterval(createObstacle, 2000);
+      return () => clearInterval(intervalId); // Nettoyage du setInterval
+    }
+  }, [gameOver]);
 
-  function video2() {
-    console.log('video2');
-  }
+  // Accélérer les obstacles toutes les x secondes
+  useEffect(() => {
+    if (!gameOver) {
+      const speedInterval = setInterval(() => {
+        setObstacleSpeed(prevSpeed => prevSpeed + 1); // Augmenter la vitesse des obstacles
+      }, intervalSpeedIncrease); // Augmenter la vitesse toutes les 10 secondes
 
-  function video3() {
-    console.log('video3');
-  }
+      return () => clearInterval(speedInterval); // Nettoyage de l'intervalle
+    }
+  }, [gameOver]);
+
+  // Rendu des obstacles
+  const renderObstacles = obstacles.map(obstacle => (
+    <Animated.View
+      key={obstacle.id}
+      style={[
+        styles.obstacle,
+        {
+          width: OBSTACLE_WIDTH,
+          height: OBSTACLE_HEIGHT,
+          left: obstacle.left,
+          top: obstacle.top,
+        },
+      ]}
+    />
+  ));
+
+  // Message de fin de jeu
+  const renderGameOver = gameOver && (
+    <View style={styles.gameOverContainer}>
+      <Text style={styles.gameOverText}>Game Over!</Text>
+      <Text style={styles.gameOverText}>Score Final: {score}</Text>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.backgroundStyle}>
-      {/* top barre */}
-      <View style={styles.view}>
-        <Image
-          style={styles.image}
-          source={require('./src/assets/images/youtube.png')}
-        />
-        <View style={styles.buttonContainer}>
-          <IconButton
-            source={require('./src/assets/images/live.png')}
-            action={live}
-          />
-          <IconButton
-            source={require('./src/assets/images/notifications.png')}
-            action={notifications}
-          />
-          <IconButton
-            source={require('./src/assets/images/recherche.png')}
-            action={recherche}
-          />
-        </View>
-      </View>
-      {/* ScrollView horizontal pour les catégories */}
-      <ScrollView
-        contentContainerStyle={styles.textview}
-        horizontal
-        showsHorizontalScrollIndicator={false} // Cache la barre de défilement horizontale
-      >
-        <IconButton
-          source={require('./src/assets/images/safari.png')}
-          action={safari}
-        />
-
-        {/* Catégories dynamiquement générées */}
-        {categories.map((category, index) => (
-          <Text key={index} style={styles.category}>
-            {category}
-          </Text>
-        ))}
-      </ScrollView>
-
-      <ScrollView>
-        <Video
-          title={'video1'}
-          source={require('./src/assets/images/miniature-1.jpeg')}
-          action={video1}
-        />
-        <Video
-          title={'video2'}
-          source={require('./src/assets/images/miniature-2.jpeg')}
-          action={video2}
-        />
-        <Video
-          title={'video3'}
-          source={require('./src/assets/images/miniature-3.jpeg')}
-          action={video3}
-        />
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.score}>Score: {score}</Text>
+      <Animated.View
+        {...panResponder.panHandlers} // Permet de gérer le mouvement du joueur
+        style={[styles.player, {left: playerPosition}]} // Applique la position animée
+      />
+      {renderObstacles}
+      {renderGameOver}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundStyle: {
+  container: {
     flex: 1,
-    backgroundColor: '#fff', // Assure-toi d'avoir un fond blanc
-  },
-  view: {
-    width: '100%',
-    height: 50,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center', // Ajouter un alignement vertical
-    paddingHorizontal: 10,
-  },
-  image: {
-    width: 100,
-    height: 50,
-    resizeMode: 'contain',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    backgroundColor: '#111',
+    justifyContent: 'center',
     alignItems: 'center',
-    width: '60%', // Ajuste la largeur du conteneur pour plus de contrôle
+    position: 'relative',
   },
-  icon: {
-    width: 35,
-    height: 35,
+  player: {
+    position: 'absolute',
+    bottom: 50,
+    width: PLAYER_WIDTH,
+    height: PLAYER_HEIGHT,
+    backgroundColor: 'white',
   },
-  textview: {
-    backgroundColor: '#f5f5f5', // Couleur de fond plus douce
-    width: '100%',
-    height: 50,
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'flex-start', // Change à 'flex-start' pour éviter un trop grand espacement entre les éléments
+  obstacle: {
+    position: 'absolute',
+    backgroundColor: 'red',
+  },
+  score: {
+    alignItems: 'flex-end',
+    top: 400,
+    left: 120,
+    color: 'white',
+    fontSize: 30,
+  },
+  gameOverContainer: {
+    position: 'absolute',
+    top: '40%',
+    left: '10%',
+    width: '80%',
     alignItems: 'center',
-    paddingHorizontal: 10, // Ajoute un peu de padding pour un meilleur espacement
   },
-  category: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginRight: 20, // Espacement entre les catégories
+  gameOverText: {
+    color: 'white',
+    fontSize: 24,
   },
 });
-
-export default App;
